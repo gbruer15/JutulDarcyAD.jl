@@ -23,9 +23,11 @@ end
 display(state::jutulAllState{T}) where T = println("$(typeof(state))")
 
 jutulState(state::Dict) = jutulState{eltype(state[:Reservoir][:Saturations])}(state)
-jutulStates(states::Vector{Dict{Symbol, T}}) where T = jutulStates{eltype(states[1][:Reservoir][:Saturations])}([jutulState(states[i]) for i = 1:length(states)])
+jutulStates(states::Vector{Dict{Symbol, T}}) where T = jutulStates{eltype(states[1][:Reservoir][:Saturations])}(states)
+jutulStates{T}(states::Vector{Dict{Symbol, U}}) where {T,U} = jutulStates{T}([jutulState(states[i]) for i = 1:length(states)])
 jutulSimpleState(state::Dict{Symbol, T}) where T = jutulSimpleState{eltype(state[:Saturations])}(state)
-jutulSimpleStates(states::Vector{Dict{Symbol, T}}) where T = jutulSimpleStates{eltype(states[1][:Saturations])}([jutulSimpleState(states[i]) for i = 1:length(states)])
+jutulSimpleStates(states::Vector{Dict{Symbol, T}}) where T = jutulSimpleStates{eltype(states[1][:Saturations])}(states)
+jutulSimpleStates{T}(states::Vector{Dict{Symbol, U}}) where {T,U} = jutulSimpleStates{T}([jutulSimpleState(states[i]) for i = 1:length(states)])
 
 Saturations(state::jutulState) = state.state[:Reservoir][:Saturations][1,:]
 Pressure(state::jutulState) = state.state[:Reservoir][:Pressure]
@@ -56,6 +58,7 @@ length(state::jutulSimpleOrMultiModelStates) = sum([length(state.states[i]) for 
 size(state::jutulAllState) = (length(state),)
 
 vec(state::jutulAllState) = vcat(Saturations(state), Pressure(state))
+
 
 IndexStyle(::jutulAllState) = IndexLinear()
 function getindex(state::jutulState, i::Int)

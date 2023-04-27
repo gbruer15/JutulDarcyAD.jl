@@ -38,9 +38,8 @@ function setup_well_model(M::jutulModel{D, T}, f::Union{jutulForce{D, T}, jutulV
     sys = ImmiscibleSystem((VaporPhase(), AqueousPhase()), reference_densities = [ρH2O, ρCO2])
     domain_spec = reservoir_domain(CartesianMesh(M), porosity = M.ϕ, permeability = M.K)
     domain = discretized_domain_tpfv_flow(domain_spec)
-    model_parameters = Dict(:PhaseViscosities=> [visCO2, visH2O])
+    model_parameters = Dict(:Reservoir=>Dict(:PhaseViscosities=> [visCO2, visH2O]))
     model, parameters = setup_reservoir_model(domain_spec, sys, wells = Is, parameters=model_parameters)
-    select_output_variables!(model.models.Reservoir, :all)
     ρ = ConstantCompressibilityDensities(p_ref = 150*bar, density_ref = [ρCO2, ρH2O], compressibility = [1e-4/bar, 1e-6/bar])
     replace_variables!(model, PhaseMassDensities = ρ)
     replace_variables!(model, RelativePermeabilities = BrooksCoreyRelPerm(sys, [2.0, 2.0], [0.1, 0.1], 1.0))
@@ -52,11 +51,16 @@ function setup_well_model(M::jutulModel{D, T}, f::Union{jutulForce{D, T}, jutulV
     forces = setup_reservoir_forces(model, control = controls)
 
     ### initial state
-    Z = repeat((1:M.n[end])*M.d[end], inner = prod(M.n[1:2]))
-    p0 = ρH2O * g * (Z .+ M.h) # rho * g * h
-    state0 = setup_reservoir_state(model, Pressure = p0, Saturations = [0.0, 1.0])
+    state0 = empty_reservoir_state(model, M.n, M.d, z_offset=M.h, ρH2O=ρH2O, g=g)
 
     return model, parameters, state0, forces
+end
+
+function empty_reservoir_state(model, grid_dims, cell_dims; z_offset=0, ρH2O=ρH2O, g=10)
+    Z = repeat((1:grid_dims[end])*cell_dims[end], inner = prod(grid_dims[1:2]))
+    p0 = ρH2O * g * (Z .+ z_offset) # rho * g * h
+    state0 = setup_reservoir_state(model, Pressure = p0, Saturations = [0.0, 1.0])
+    return state0
 end
 
 function source(M::jutulModel{D, T}, f::jutulSource{D, T}; ρCO2::T=T(ρCO2)) where {D, T}
